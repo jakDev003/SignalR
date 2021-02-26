@@ -1,0 +1,65 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<script src="~/lib/jquery/dist/jquery.js"></script>
+<script src="~/lib/aspnet/signalr/dist/browser/signalr.js"></script>
+
+<div class="text-center">
+    <div class="box">
+        <div id="inputs">
+            Type Name: <input type="text" id="userName" />
+            Message: <input type="text" id="userMessage" />
+            <input type="button" id="btnSendMessage" value="Send Message" />
+        </div>
+    </div>
+    <div class="box">
+        <div id="outputs">
+            <ul id="messagesList"></ul>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        SignalRSetup();
+    });
+
+    function SignalRSetup() {
+        var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub/").build();
+        document.getElementById("btnSendMessage").disabled = true;
+
+        connection.on("RecieveMessage", function (timestamp, user, message) {
+            //var msg = message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            var msg = encodeURIComponent(message);
+            var encodedMsg = timestamp + " --> " + user + " : " + msg;
+            var li = document.createElement("li");
+            li.textContent = encodedMsg;
+            document.getElementById("messagesList").appendChild(li);
+        });
+
+        connection.start().then(function () {
+            document.getElementById("btnSendMessage").disabled = false;
+        }).catch(function () {
+            return console.error(err.toString());
+        });
+
+        document.getElementById("btnSendMessage").addEventListener("click", function (evt) {
+            var user = document.getElementById("userName").value;
+            var message = document.getElementById("userMessage").value;
+            connection.invoke("SendMessage", GetTimeStamp(), user, message).catch(function (err) {
+                return console.error(err.toString());
+            });
+            evt.preventDefault();
+        });
+    }
+
+    // Format time stamp to look pretty
+    function GetTimeStamp() {
+        var today = new Date();
+        var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+        var time = today.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second:'numeric', hour12: true });
+        return date + ' ' + time;
+    }
+
+</script>
